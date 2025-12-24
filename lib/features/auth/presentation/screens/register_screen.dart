@@ -1,5 +1,8 @@
+// ignore: non_constant_identifier_names
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:teslo_shop/features/auth/presentation/provides/login_form_providers.dart';
 import 'package:teslo_shop/features/shared/shared.dart';
 
 
@@ -60,12 +63,13 @@ class RegisterScreen extends StatelessWidget {
   }
 }
 
-class _RegisterForm extends StatelessWidget {
+class _RegisterForm extends ConsumerWidget {
   const _RegisterForm();
 
   @override
-  Widget build(BuildContext context) {
-
+  Widget build(BuildContext context,WidgetRef ref) { 
+    final loginForm = ref.watch(loginFormProvider);
+    final notifier = ref.read(loginFormProvider.notifier);
     final textStyles = Theme.of(context).textTheme;
 
     return Padding(
@@ -76,28 +80,45 @@ class _RegisterForm extends StatelessWidget {
           Text('Nueva cuenta', style: textStyles.titleMedium ),
           const SizedBox( height: 50 ),
 
-          const CustomTextFormField(
+           CustomTextFormField(
             label: 'Nombre completo',
             keyboardType: TextInputType.emailAddress,
+            onChanged:notifier.setFullName, 
+            errorMessage: loginForm.fullName.isEmpty
+                ? null
+                : LoginFormValidators.validateFullName(loginForm.fullName),
+
           ),
           const SizedBox( height: 30 ),
 
-          const CustomTextFormField(
+           CustomTextFormField(
             label: 'Correo',
             keyboardType: TextInputType.emailAddress,
+            onChanged: notifier.setEmail,
+            errorMessage: loginForm.email.isEmpty
+                ? null
+                : LoginFormValidators.validateEmail(loginForm.email),
           ),
           const SizedBox( height: 30 ),
 
-          const CustomTextFormField(
+           CustomTextFormField(
             label: 'Contraseña',
             obscureText: true,
+            onChanged: notifier.setPassword,
+            errorMessage: loginForm.password.isEmpty
+                ? null
+                : LoginFormValidators.validatePassword(loginForm.password),
           ),
     
           const SizedBox( height: 30 ),
 
-          const CustomTextFormField(
+           CustomTextFormField(
             label: 'Repita la contraseña',
             obscureText: true,
+            onChanged: notifier.setConfirmPassword,
+            errorMessage: loginForm.ConfirmPassword.isEmpty
+                ? null
+                : LoginFormValidators.validateConfirmPassword(loginForm.password, loginForm.ConfirmPassword),
           ),
     
           const SizedBox( height: 30 ),
@@ -108,7 +129,36 @@ class _RegisterForm extends StatelessWidget {
             child: CustomFilledButton(
               text: 'Crear',
               buttonColor: Colors.black,
-              onPressed: (){
+              onPressed: loginForm.isLoading
+              ? null
+              : () async{
+                  // 1.- Aquí va la lógica para registrar (Donde se hace la validacion real del formulario)
+                  // 1) Validación de campos vacíos
+                  if (loginForm.fullName.isEmpty || loginForm.email.isEmpty || loginForm.password.isEmpty || loginForm.ConfirmPassword.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                       SnackBar(
+                        content: Text('Por favor complete todos los campos'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                    return;
+                  }
+                      final emailError =
+                          LoginFormValidators.validateEmail(loginForm.email);
+                      final passwordError =
+                          LoginFormValidators.validatePassword(loginForm.password);
+                 
+                      final ConfirmPasswordError =
+                          LoginFormValidators.validateConfirmPassword(loginForm.password, loginForm.ConfirmPassword);
+                      if (emailError != null || passwordError != null || ConfirmPasswordError != null) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(emailError ?? passwordError ?? ConfirmPasswordError!),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                        return;
+                      }
 
               },
             )
