@@ -50,11 +50,15 @@ class AuthDatasourceImp extends AuthDataSource {
       });
       debugPrint('[AuthDatasource] Login exitoso. Response: $response');
       
-      // El servidor devuelve los datos directamente, necesitamos transformarlos
-      // al formato que espera AuthResponse: { user: {...}, token: "..." }
+      // El servidor devuelve los datos del usuario directamente junto con el token
+      // Estructura de respuesta: { id, email, fullName, roles, token, ... }
+      // Users.fromMap espera recibir el token en el map, así que lo mantenemos
+      // AuthResponse.fromMap espera { user: {...}, token: "..." }
+      final token = response['token'] as String? ?? '';
+      
       final formattedResponse = {
-        'user': response,
-        'token': response['token'],
+        'user': response, // response ya contiene todos los datos incluyendo token
+        'token': token,   // token extraído para AuthResponse
       };
       
       return AuthResponse.fromMap(formattedResponse);
@@ -77,11 +81,15 @@ class AuthDatasourceImp extends AuthDataSource {
       });
       debugPrint('[AuthDatasource] Registro exitoso. Response: $response');
       
-      // El servidor devuelve los datos directamente, necesitamos transformarlos
-      // al formato que espera AuthResponse: { user: {...}, token: "..." }
+      // El servidor devuelve los datos del usuario directamente junto con el token
+      // Estructura de respuesta: { id, email, fullName, roles, token, ... }
+      // Users.fromMap espera recibir el token en el map, así que lo mantenemos
+      // AuthResponse.fromMap espera { user: {...}, token: "..." }
+      final token = response['token'] as String? ?? '';
+      
       final formattedResponse = {
-        'user': response,
-        'token': response['token'],
+        'user': response, // response ya contiene todos los datos incluyendo token
+        'token': token,   // token extraído para AuthResponse
       };
       
       return AuthResponse.fromMap(formattedResponse);

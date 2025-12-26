@@ -75,10 +75,10 @@ class LoginFormNotifier extends StateNotifier<LoginFormState> {
   }
 
   void setPassword(String password) {
-    state = super.state.copyWith(password: password);
+    state = state.copyWith(password: password);
   }
   void setConfirmPassword(String confirmPassword) {
-    state = super.state.copyWith(confirmPassword: confirmPassword);
+    state = state.copyWith(confirmPassword: confirmPassword);
   }
   // Validaciones de los campos con sus respectivas funciones
   static bool isValidEmail(String email) {
