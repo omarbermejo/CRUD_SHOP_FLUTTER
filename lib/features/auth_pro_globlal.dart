@@ -1,10 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/legacy.dart' show StateNotifier, StateNotifierProvider;
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:teslo_shop/features/auth/domain/data_source/auth_datasource.dart';
-import 'package:teslo_shop/features/auth/domain/entitis/auth_response.dart';
-import 'package:teslo_shop/features/auth/domain/entitis/users.dart';
 import 'package:teslo_shop/features/auth/infretuction/auth_datasource_imp.dart';
 import 'package:teslo_shop/features/auth/infretuction/token_storage.dart';
+import 'auth_state.dart';
 
 final authDatasourceProvider = Provider<AuthDataSource>((ref) {
   return AuthDatasourceImp();
@@ -14,42 +13,12 @@ final tokenStorageProvider = Provider<TokenStorage>((ref) {
   return TokenStorage();
 });
 
-final authProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
+final authProvider =
+    StateNotifierProvider<AuthNotifier, AuthState>((ref) {
   final datasource = ref.watch(authDatasourceProvider);
   final storage = ref.watch(tokenStorageProvider);
-
   return AuthNotifier(datasource, storage)..checkAuthStatus();
 });
-
-enum AuthStatus { checking, authenticated, unauthenticated }
-
-class AuthState {
-  final AuthStatus status;
-  final Users? user;
-  final String? token;
-  final String? errorMessage;
-
-  const AuthState({
-    this.status = AuthStatus.checking,
-    this.user,
-    this.token,
-    this.errorMessage,
-  });
-
-  AuthState copyWith({
-    AuthStatus? status,
-    Users? user,
-    String? token,
-    String? errorMessage,
-  }) {
-    return AuthState(
-      status: status ?? this.status,
-      user: user ?? this.user,
-      token: token ?? this.token,
-      errorMessage: errorMessage,
-    );
-  }
-}
 
 class AuthNotifier extends StateNotifier<AuthState> {
   final AuthDataSource datasource;
@@ -57,11 +26,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   AuthNotifier(this.datasource, this.storage) : super(const AuthState());
 
+  /// Logica del login
   Future<void> login(String email, String password) async {
     try {
-      state = state.copyWith(status: AuthStatus.checking, errorMessage: null);
+      state = state.copyWith(status: AuthStatus.checking);
 
-      final AuthResponse response = await datasource.login(email, password);
+      final response = await datasource.login(email, password);
 
       await storage.saveToken(response.token);
 
@@ -69,6 +39,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         status: AuthStatus.authenticated,
         user: response.user,
         token: response.token,
+        errorMessage: null,
       );
     } catch (e) {
       state = state.copyWith(
@@ -78,27 +49,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
-  Future<void> register(String email, String password, String fullName) async {
-    try {
-      state = state.copyWith(status: AuthStatus.checking, errorMessage: null);
-
-      final AuthResponse response = await datasource.register(email, password, fullName);
-
-      await storage.saveToken(response.token);
-
-      state = state.copyWith(
-        status: AuthStatus.authenticated,
-        user: response.user,
-        token: response.token,
-      );
-    } catch (e) {
-      state = state.copyWith(
-        status: AuthStatus.unauthenticated,
-        errorMessage: e.toString().replaceAll('Exception: ', ''),
-      );
-    }
-  }
-
+  /// Checha el estado de autenticación-
   Future<void> checkAuthStatus() async {
     final token = await storage.getToken();
 
@@ -121,6 +72,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
+  /// Hace un logout
   Future<void> logout() async {
     await storage.removeToken();
 

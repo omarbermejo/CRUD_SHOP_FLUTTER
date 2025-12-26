@@ -1,10 +1,11 @@
 
 import 'package:flutter_riverpod/legacy.dart';
 
+import 'package:teslo_shop/features/auth/infretuction/auth_datasource_imp.dart';
 class LoginFormState {
   final String email;
   final String password;
-  final String ConfirmPassword;
+  final String confirmPassword;
   final bool isLoading;
   final String? errorMessage;
   final String fullName;
@@ -13,7 +14,7 @@ class LoginFormState {
     this.email = '',
     this.password = '',
     this.fullName = '',
-    this.ConfirmPassword = '',
+    this.confirmPassword = '',
     this.isLoading = false,
     this.errorMessage,
   });
@@ -24,13 +25,13 @@ class LoginFormState {
     bool? isLoading,
     String? errorMessage,
     String? fullName,
-    String? ConfirmPassword,
+    String? confirmPassword,
   }) {
     return LoginFormState(
       email: email ?? this.email,
       password: password ?? this.password,
       fullName: fullName ?? this.fullName,  
-      ConfirmPassword: ConfirmPassword ?? this.ConfirmPassword,
+      confirmPassword: confirmPassword ?? this.confirmPassword,
       isLoading: isLoading ?? this.isLoading,
       errorMessage: errorMessage,
     );
@@ -74,10 +75,10 @@ class LoginFormNotifier extends StateNotifier<LoginFormState> {
   }
 
   void setPassword(String password) {
-    state = state.copyWith(password: password);
+    state = super.state.copyWith(password: password);
   }
-  void setConfirmPassword(String ConfirmPassword) {
-    state = state.copyWith(ConfirmPassword: ConfirmPassword);
+  void setConfirmPassword(String confirmPassword) {
+    state = super.state.copyWith(confirmPassword: confirmPassword);
   }
   // Validaciones de los campos con sus respectivas funciones
   static bool isValidEmail(String email) {
@@ -91,8 +92,31 @@ class LoginFormNotifier extends StateNotifier<LoginFormState> {
   static bool isValidFullName(String fullName) {
     return fullName.isNotEmpty;
   }
-  static bool isValidConfirmPassword(String password, String ConfirmPassword) {
-    return password == ConfirmPassword;
+  static bool isValidConfirmPassword(String password, String confirmPassword) {
+    return password == confirmPassword;
+  }
+
+
+  // Desde aqui se dispara a la API todo el procesos de validacion del login
+  Future<bool> login() async {
+    try {  
+      state = state.copyWith(isLoading: true, errorMessage: null);
+      final authDataSource = AuthDatasourceImp();
+      await Future.delayed(const Duration(seconds: 2));
+      final user = await authDataSource.login(
+        state.email,
+        state.password,
+      );
+      state = state.copyWith(isLoading: false);
+      // ignore: unnecessary_null_comparison
+      return user != null;
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        errorMessage: 'Error al iniciar sesión. Inténtalo de nuevo.',
+      );
+      return false;
+    }
   }
 }
 
@@ -117,8 +141,8 @@ class LoginFormValidators {
     }
     return null;
   }
-  static String? validateConfirmPassword(String password, String ConfirmPassword) {
-    if (password != ConfirmPassword) {
+  static String? validateConfirmPassword(String password, String confirmPassword) {
+    if (password != confirmPassword) {
       return 'Las contraseñas no coinciden.';
     }
     return null;

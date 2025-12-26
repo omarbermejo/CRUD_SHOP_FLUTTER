@@ -5,7 +5,13 @@ import 'package:teslo_shop/config/const/env.dart';
 import 'package:teslo_shop/config/router/app_router.dart';
 
 void main() async{
-  await EnveriomentConfig.initEnv();
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  try {
+    await EnveriomentConfig.initEnv();
+  } catch (e) {
+    rethrow;
+  }
   
   runApp( 
     ProviderScope(child: MainApp())

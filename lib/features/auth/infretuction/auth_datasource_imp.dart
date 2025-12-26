@@ -1,101 +1,137 @@
-
-
-import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:teslo_shop/config/const/env.dart';
 import 'package:teslo_shop/features/auth/domain/data_source/auth_datasource.dart';
+import 'package:teslo_shop/features/auth/domain/entitis/auth_response.dart';
 import 'package:teslo_shop/features/auth/domain/entitis/users.dart';
+import 'package:teslo_shop/features/shared/infra/http/http_client.dart';
 
 class AuthDatasourceImp extends AuthDataSource {
+  ApiHttpClient? _httpClient;
 
+  ApiHttpClient get httpClient {
+    _httpClient ??= _createHttpClient();
+    return _httpClient!;
+  }
 
-  /* Esta libreria manda a llamar a las peticiones http con una mayor seguridad. 
-   * Esta pre-configurada con la clase o libreria ENV. que creemos para manejar las variables de entorno.
-  */
+  AuthDatasourceImp();
 
-  final dio = Dio(
-    BaseOptions(
-      baseUrl: EnveriomentConfig.apiUrl
-    ),
-  );
-
-
-  /*
-    Estas son las clases que van a recibir las peticones HTTP desde la api previamente creada.
-    Estas van a retornar un Future de tipo Users que es la entidad creada para manejar los datos del usuario.
-    Se crearan los objetos / metodos necesarios para manejar las respuestas de la API.
-  
-   */
-  @override
-  Future<Users> login(String email, String password) async{
+  ApiHttpClient _createHttpClient() {
     try {
-      /* Se pide la peticion POST a la API con los datos de email y password, con la URL "/auth/login". 
-      Estan van a devolver los objetos "email y password".
-      */
-      final response = await dio.post('/auth/login', data: {
-        'email': email,
-        'password': password,
-      });
+      // Obtener la URL de la API desde la configuración
+      final apiUrl = EnveriomentConfig.apiUrl;
+      debugPrint('[AuthDatasource] Configurando cliente HTTP con baseUrl: $apiUrl');
 
-      // Se mapea la respuesta de la API a la entidad Users creada previamente. 
-      final userMap = response.data as Map<String, dynamic>;
-      final user = Users.fromMap(userMap);
-
-      return user;
+      final client = ApiHttpClient(
+        baseUrl: apiUrl,
+        connectTimeout: const Duration(seconds: 10),
+        receiveTimeout: const Duration(seconds: 10),
+        defaultHeaders: {'Content-Type': 'application/json'},
+      );
+      debugPrint('[AuthDatasource] Cliente HTTP configurado correctamente');
+      return client;
+    } on Exception catch (e) {
+      debugPrint('[AuthDatasource] Error al configurar cliente HTTP: $e');
+      // Re-lanzar excepciones de configuración con su mensaje original
+      // (Estas ya tienen mensajes descriptivos de EnveriomentConfig)
+      rethrow;
     } catch (e) {
-      throw Exception('Error en la recoleccion de datos, mapeo incorrecto: $e');
+      debugPrint('[AuthDatasource] Error inesperado al configurar cliente HTTP: $e');
+      throw Exception('Error al configurar el cliente HTTP: $e');
     }
-  
   }
 
   @override
-  Future<Users> register(String email, String password, String fullName) async{
+  Future<AuthResponse> login(String email, String password) async {
     try {
-      /* Se pide la peticion POST a la API con los datos de email, password y fullName, con la URL "/auth/register". 
-      Estan van a devolver los objetos "email, password y fullName".
-      */
-      final response = await dio.post('/auth/register', data: {
+      debugPrint('[AuthDatasource] Iniciando login para: $email');
+      final response = await httpClient.post('/auth/login', body: {
+        'email': email,
+        'password': password,
+      });
+      debugPrint('[AuthDatasource] Login exitoso. Response: $response');
+      
+      // El servidor devuelve los datos directamente, necesitamos transformarlos
+      // al formato que espera AuthResponse: { user: {...}, token: "..." }
+      final formattedResponse = {
+        'user': response,
+        'token': response['token'],
+      };
+      
+      return AuthResponse.fromMap(formattedResponse);
+    } catch (e, stackTrace) {
+      debugPrint('[AuthDatasource] Error en login: $e');
+      debugPrint('[AuthDatasource] StackTrace: $stackTrace');
+      throw Exception(_handleError(e));
+    }
+  }
+
+  @override
+  Future<AuthResponse> register(
+      String email, String password, String fullName) async {
+    try {
+      debugPrint('[AuthDatasource] Iniciando registro para: $email');
+      final response = await httpClient.post('/auth/register', body: {
         'email': email,
         'password': password,
         'fullName': fullName,
       });
-
-      // Se mapea la respuesta de la API a la entidad Users creada previamente. 
-      final userMap = response.data as Map<String, dynamic>;
-      final user = Users.fromMap(userMap);
-
-      return user;
-    } catch (e) {
-      throw Exception('Error en la recoleccion de datos, mapeo incorrecto: $e');
+      debugPrint('[AuthDatasource] Registro exitoso. Response: $response');
+      
+      // El servidor devuelve los datos directamente, necesitamos transformarlos
+      // al formato que espera AuthResponse: { user: {...}, token: "..." }
+      final formattedResponse = {
+        'user': response,
+        'token': response['token'],
+      };
+      
+      return AuthResponse.fromMap(formattedResponse);
+    } catch (e, stackTrace) {
+      debugPrint('[AuthDatasource] Error en registro: $e');
+      debugPrint('[AuthDatasource] StackTrace: $stackTrace');
+      throw Exception(_handleError(e));
     }
   }
 
   @override
   Future<Users> checkAuthStatus(String token) async {
     try {
-      /* Se pide la peticion GET a la API con el token de autenticacion, con la URL "/auth/check-status". 
-      Estan van a devolver el objeto "token".
-      */
-      final response = await dio.get('/auth/check-status', options: Options(
-        headers: {
-          'Authorization': 'Bearer $token'
-        }
-      ));
-
-      // Se mapea la respuesta de la API a la entidad Users creada previamente. 
-      final userMap = response.data as Map<String, dynamic>;
-      final user = Users.fromMap(userMap);
-
-      return user;
-    } catch (e) {
-      throw Exception('Error en la recoleccion de datos, mapeo incorrecto: $e');
+      debugPrint('[AuthDatasource] Verificando estado de autenticación');
+      final response = await httpClient.get(
+        '/auth/check-status',
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      debugPrint('[AuthDatasource] Check status exitoso. Response: $response');
+      return Users.fromMap(response['user']);
+    } catch (e, stackTrace) {
+      debugPrint('[AuthDatasource] Error en checkAuthStatus: $e');
+      debugPrint('[AuthDatasource] StackTrace: $stackTrace');
+      throw Exception(_handleError(e));
     }
   }
 
   @override
-  Future<Users> logout() {
-    // Implementación del método de logout
-    throw UnimplementedError();
+  Future<void> logout() async {
+    // aquí podrías llamar un endpoint si lo tienes, por ejemplo:
+    // await httpClient.post('/auth/logout');
+    return;
+  }
+
+  String _handleError(dynamic error) {
+    // El ApiHttpClient ya maneja los errores y los convierte en HttpException
+    // con mensajes descriptivos, así que solo necesitamos extraer el mensaje
+    final errorString = error.toString();
+
+    // Si ya es una excepción con mensaje, extraer solo el mensaje
+    if (errorString.contains('Exception: ')) {
+      return errorString.replaceFirst('Exception: ', '');
+    }
+
+    // Si es un HttpException, extraer el mensaje
+    if (errorString.contains('HttpException: ')) {
+      return errorString.replaceFirst('HttpException: ', '');
+    }
+
+    // Retornar el mensaje de error tal cual
+    return errorString;
   }
 }
-
-
