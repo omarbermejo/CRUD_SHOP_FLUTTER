@@ -48,11 +48,27 @@ class LoginScreen extends ConsumerWidget {
   }
 }
 
-class _LoginForm extends ConsumerWidget {
+class _LoginForm extends ConsumerStatefulWidget {
   const _LoginForm();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_LoginForm> createState() => _LoginFormState();
+}
+
+class _LoginFormState extends ConsumerState<_LoginForm> {
+  bool _hasInitialized = false;
+
+  @override
+  Widget build(BuildContext context) {
+    // Limpiar el formulario la primera vez que se construye la pantalla
+    if (!_hasInitialized) {
+      _hasInitialized = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          ref.read(loginFormProvider.notifier).reset();
+        }
+      });
+    }
     final loginForm = ref.watch(loginFormProvider);
     final loginNotifier = ref.read(loginFormProvider.notifier);
 
@@ -88,6 +104,8 @@ class _LoginForm extends ConsumerWidget {
                 ? null
                 : LoginFormValidators.validatePassword(loginForm.password),
           ),
+
+    
 
           const SizedBox(height: 30),
 

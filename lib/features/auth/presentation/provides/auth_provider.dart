@@ -5,6 +5,8 @@ import 'package:teslo_shop/features/auth/domain/entitis/auth_response.dart';
 import 'package:teslo_shop/features/auth/domain/entitis/users.dart';
 import 'package:teslo_shop/features/auth/infretuction/auth_datasource_imp.dart';
 import 'package:teslo_shop/features/auth/infretuction/token_storage.dart';
+import 'package:teslo_shop/features/shared/errors/errors.dart';
+import 'package:teslo_shop/features/shared/errors/general/app_error.dart';
 
 final authDatasourceProvider = Provider<AuthDataSource>((ref) {
   return AuthDatasourceImp();
@@ -70,10 +72,15 @@ class AuthNotifier extends StateNotifier<AuthState> {
         user: response.user,
         token: response.token,
       );
+    } on AppError catch (e) {
+      state = state.copyWith(
+        status: AuthStatus.unauthenticated,
+        errorMessage: e.message,
+      );
     } catch (e) {
       state = state.copyWith(
         status: AuthStatus.unauthenticated,
-        errorMessage: e.toString().replaceAll('Exception: ', ''),
+        errorMessage: 'Error inesperado: ${e.toString()}',
       );
     }
   }
@@ -91,10 +98,15 @@ class AuthNotifier extends StateNotifier<AuthState> {
         user: response.user,
         token: response.token,
       );
+    } on AppError catch (e) {
+      state = state.copyWith(
+        status: AuthStatus.unauthenticated,
+        errorMessage: e.message,
+      );
     } catch (e) {
       state = state.copyWith(
         status: AuthStatus.unauthenticated,
-        errorMessage: e.toString().replaceAll('Exception: ', ''),
+        errorMessage: 'Error inesperado: ${e.toString()}',
       );
     }
   }

@@ -1,7 +1,6 @@
 import 'package:go_router/go_router.dart';
 import 'package:teslo_shop/features/auth/auth.dart';
 import 'package:teslo_shop/features/products/products.dart';
-import 'package:teslo_shop/features/products/presentation/screens/product_screen_details.dart';
 
 final appRouter = GoRouter(
   initialLocation: '/login',
@@ -23,10 +22,25 @@ final appRouter = GoRouter(
       builder: (context, state) => const ProductsScreen(),
     ),
     GoRoute(
+      path: '/products/create',
+      builder: (context, state) => const ProductCreateScreen(),
+    ),
+    GoRoute(
       path: '/product/:id',
       builder: (context, state) {
         final productId = state.pathParameters['id']!;
         return ProductScreenDetails(productId: productId);
+      },
+    ),
+    GoRoute(
+      path: '/products/my-products',
+      builder: (context, state) => const MyProductsScreen(),
+    ),
+    GoRoute(
+      path: '/products/edit/:id',
+      builder: (context, state) {
+        final productId = state.pathParameters['id']!;
+        return ProductEditScreen(productId: productId);
       },
     ),
   ],

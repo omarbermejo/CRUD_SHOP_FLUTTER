@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/legacy.dart';
 import 'package:teslo_shop/features/auth/domain/data_source/auth_datasource.dart';
 import 'package:teslo_shop/features/auth/infretuction/auth_datasource_imp.dart';
 import 'package:teslo_shop/features/auth/infretuction/token_storage.dart';
+import 'package:teslo_shop/features/shared/errors/errors.dart';
 import 'auth_state.dart';
 
 final authDatasourceProvider = Provider<AuthDataSource>((ref) {
@@ -41,10 +42,15 @@ class AuthNotifier extends StateNotifier<AuthState> {
         token: response.token,
         errorMessage: null,
       );
+    } on AppError catch (e) {
+      state = state.copyWith(
+        status: AuthStatus.unauthenticated,
+        errorMessage: e.message,
+      );
     } catch (e) {
       state = state.copyWith(
         status: AuthStatus.unauthenticated,
-        errorMessage: e.toString().replaceAll('Exception: ', ''),
+        errorMessage: 'Error inesperado: ${e.toString()}',
       );
     }
   }

@@ -3,6 +3,7 @@ import 'package:teslo_shop/config/const/env.dart';
 import 'package:teslo_shop/features/auth/domain/data_source/auth_datasource.dart';
 import 'package:teslo_shop/features/auth/domain/entitis/auth_response.dart';
 import 'package:teslo_shop/features/auth/domain/entitis/users.dart';
+import 'package:teslo_shop/features/shared/errors/errors.dart';
 import 'package:teslo_shop/features/shared/infra/http/http_client.dart';
 
 class AuthDatasourceImp extends AuthDataSource {
@@ -62,10 +63,16 @@ class AuthDatasourceImp extends AuthDataSource {
       };
       
       return AuthResponse.fromMap(formattedResponse);
+    } on AppError {
+      rethrow;
     } catch (e, stackTrace) {
       debugPrint('[AuthDatasource] Error en login: $e');
       debugPrint('[AuthDatasource] StackTrace: $stackTrace');
-      throw Exception(_handleError(e));
+      throw NetworkError(
+        message: 'Error inesperado al realizar login: ${e.toString()}',
+        code: 'LOGIN_ERROR',
+        originalError: e,
+      );
     }
   }
 
@@ -93,10 +100,16 @@ class AuthDatasourceImp extends AuthDataSource {
       };
       
       return AuthResponse.fromMap(formattedResponse);
+    } on AppError {
+      rethrow;
     } catch (e, stackTrace) {
       debugPrint('[AuthDatasource] Error en registro: $e');
       debugPrint('[AuthDatasource] StackTrace: $stackTrace');
-      throw Exception(_handleError(e));
+      throw NetworkError(
+        message: 'Error inesperado al registrar usuario: ${e.toString()}',
+        code: 'REGISTER_ERROR',
+        originalError: e,
+      );
     }
   }
 
@@ -110,10 +123,16 @@ class AuthDatasourceImp extends AuthDataSource {
       );
       debugPrint('[AuthDatasource] Check status exitoso. Response: $response');
       return Users.fromMap(response['user']);
+    } on AppError {
+      rethrow;
     } catch (e, stackTrace) {
       debugPrint('[AuthDatasource] Error en checkAuthStatus: $e');
       debugPrint('[AuthDatasource] StackTrace: $stackTrace');
-      throw Exception(_handleError(e));
+      throw NetworkError(
+        message: 'Error inesperado al verificar estado de autenticación: ${e.toString()}',
+        code: 'CHECK_AUTH_ERROR',
+        originalError: e,
+      );
     }
   }
 
@@ -124,22 +143,4 @@ class AuthDatasourceImp extends AuthDataSource {
     return;
   }
 
-  String _handleError(dynamic error) {
-    // El ApiHttpClient ya maneja los errores y los convierte en HttpException
-    // con mensajes descriptivos, así que solo necesitamos extraer el mensaje
-    final errorString = error.toString();
-
-    // Si ya es una excepción con mensaje, extraer solo el mensaje
-    if (errorString.contains('Exception: ')) {
-      return errorString.replaceFirst('Exception: ', '');
-    }
-
-    // Si es un HttpException, extraer el mensaje
-    if (errorString.contains('HttpException: ')) {
-      return errorString.replaceFirst('HttpException: ', '');
-    }
-
-    // Retornar el mensaje de error tal cual
-    return errorString;
-  }
 }

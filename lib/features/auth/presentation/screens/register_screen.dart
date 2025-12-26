@@ -119,6 +119,8 @@ class _RegisterForm extends ConsumerWidget {
                 : LoginFormValidators.validatePassword(loginForm.password),
           ),
 
+          PasswordRequirements(password: loginForm.password),
+
           const SizedBox(height: 30),
 
           CustomTextFormField(

@@ -80,6 +80,12 @@ class LoginFormNotifier extends StateNotifier<LoginFormState> {
   void setConfirmPassword(String confirmPassword) {
     state = state.copyWith(confirmPassword: confirmPassword);
   }
+  
+  /// Resetea el formulario a su estado inicial
+  void reset() {
+    state = const LoginFormState();
+  }
+  
   // Validaciones de los campos con sus respectivas funciones
   static bool isValidEmail(String email) {
     final emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+');

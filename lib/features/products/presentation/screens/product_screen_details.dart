@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:teslo_shop/config/const/env.dart';
+import 'package:teslo_shop/features/auth/presentation/provides/auth_provider.dart';
 import 'package:teslo_shop/features/products/domain/entities/product.dart';
 import 'package:teslo_shop/features/products/presentation/screens/products_screen.dart';
+import 'package:teslo_shop/features/products/presentation/utils/product_permissions.dart';
 
 final productDetailProvider = FutureProvider.family<Product, String>((ref, productId) async {
   final datasource = ref.watch(productsDatasourceProvider);
@@ -33,16 +36,33 @@ class ProductScreenDetails extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final productAsync = ref.watch(productDetailProvider(productId));
     final textStyles = Theme.of(context).textTheme;
+    final authState = ref.watch(authProvider);
+    final currentUser = authState.user;
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Detalle del Producto'),
+        actions: productAsync.when(
+          data: (product) => [
+            if (canEditProduct(product, currentUser))
+              IconButton(
+                icon: const Icon(Icons.edit),
+                tooltip: 'Editar producto',
+                onPressed: () {
+                  context.push('/products/edit/${product.id}');
+                },
+              ),
+          ],
+          loading: () => const [],
+          error: (_, __) => const [],
+        ),
       ),
       body: productAsync.when(
         data: (product) => _ProductDetailView(
           product: product,
           buildImageUrl: _buildImageUrl,
           textStyles: textStyles,
+          currentUser: currentUser,
         ),
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stack) => _ErrorView(
@@ -58,11 +78,13 @@ class _ProductDetailView extends StatefulWidget {
   final Product product;
   final String Function(String) buildImageUrl;
   final TextTheme textStyles;
+  final dynamic currentUser;
 
   const _ProductDetailView({
     required this.product,
     required this.buildImageUrl,
     required this.textStyles,
+    required this.currentUser,
   });
 
   @override
@@ -176,6 +198,26 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
                 const SizedBox(height: 32),
 
                 // Botones de acción
+                if (canEditProduct(product, widget.currentUser))
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        context.push('/products/edit/${product.id}');
+                      },
+                      icon: const Icon(Icons.edit),
+                      label: const Text('Editar Producto'),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        backgroundColor: colorScheme.primary,
+                        foregroundColor: Colors.white,
+                      ),
+                    ),
+                  ),
+
+                if (canEditProduct(product, widget.currentUser))
+                  const SizedBox(height: 12),
+
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(

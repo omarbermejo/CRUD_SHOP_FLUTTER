@@ -34,10 +34,11 @@ class ProductCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Card(
+        color: Colors.white,
         clipBehavior: Clip.antiAlias,
         elevation: 2,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(15),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -49,56 +50,80 @@ class ProductCard extends StatelessWidget {
             ),
             
             // Información del producto
-            Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Título y género
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          product.title,
-                          style: textStyles.titleSmall,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      _GenderChip(gender: product.gender),
-                    ],
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(15),
+                boxShadow: [
+                  BoxShadow(
+                    // ignore: deprecated_member_use
+                    color: Colors.grey.withValues(alpha: 0.1),
+                    spreadRadius: 2,
+                    blurRadius: 5,
+                    offset: const Offset(0, 3),
                   ),
-                  
-                  const SizedBox(height: 4),
-                  
-                  // Precio
-                  Text(
-                    '\$${product.price.toStringAsFixed(2)}',
-                    style: textStyles.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
-                  ),
-                  
-                  const SizedBox(height: 8),
-                  
-                  // Stock y tallas
-                  Row(
-                    children: [
-                      _StockBadge(stock: product.stock),
-                      const SizedBox(width: 8),
-                      if (product.sizes.isNotEmpty)
+                ],
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Título y género
+                    Row(
+                      children: [
                         Expanded(
                           child: Text(
-                            'Tallas: ${product.sizes.join(', ')}',
-                            style: textStyles.bodySmall,
+                            product.title,
+                            style: textStyles.titleSmall,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                    ],
-                  ),
-                ],
+                        _GenderChip(gender: product.gender),
+                      ],
+                    ),
+                    
+                    const SizedBox(height: 4),
+                    
+                    // Precio
+                    Text(
+                      '\$${product.price.toStringAsFixed(2)}',
+                      style: textStyles.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                    ),
+                    
+                    const SizedBox(height: 8),
+                    
+                    // Stock y tallas
+                    Row(
+                      children: [
+                        _StockBadge(stock: product.stock),
+                        const SizedBox(width: 8),
+                        if (product.sizes.isNotEmpty)
+                          Expanded(
+                            child: Text(
+                              'Tallas: ${product.sizes.join(', ')}',
+                              style: textStyles.bodySmall,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                      ],
+                    ),
+                    SizedBox(height: 100,
+                      child: Text(
+                        product.description,
+                        style: textStyles.bodySmall,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ), 
+                    
+                  ],
+                ),
               ),
             ),
           ],
