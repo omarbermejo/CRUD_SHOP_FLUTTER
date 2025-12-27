@@ -1,53 +1,17 @@
 // ignore_for_file: use_build_context_synchronously
 
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:teslo_shop/config/theme/app_theme.dart';
 import 'package:teslo_shop/features/products/presentation/providers/product_form_provider.dart';
+import 'package:teslo_shop/features/products/presentation/providers/products_providers.dart';
 import 'package:teslo_shop/features/products/presentation/screens/my_products_screen.dart';
-import 'package:teslo_shop/features/products/presentation/screens/product_screen_details.dart';
-import 'package:teslo_shop/features/products/presentation/screens/products_screen.dart';
 import 'package:teslo_shop/features/products/presentation/widgets/widgets.dart';
 import 'package:teslo_shop/features/shared/shared.dart';
 
-final productEditProvider =
-    FutureProvider.autoDispose.family<ProductEditResult, ProductEditParams>(
-  (ref, params) async {
-    final datasource = ref.watch(productsDatasourceProvider);
-    try {
-      final product = await datasource.updateProduct(params.id, params.productData);
-      return ProductEditResult.success(product);
-    } on AppError catch (e) {
-      return ProductEditResult.error(e.message);
-    } catch (e) {
-      return ProductEditResult.error(e.toString());
-    }
-  },
-);
-
-class ProductEditParams {
-  final String id;
-  final Map<String, dynamic> productData;
-
-  ProductEditParams({
-    required this.id,
-    required this.productData,
-  });
-}
-
-class ProductEditResult {
-  final bool isSuccess;
-  final String? error;
-  final dynamic product;
-
-  ProductEditResult.success(this.product)
-      : isSuccess = true,
-        error = null;
-
-  ProductEditResult.error(this.error)
-      : isSuccess = false,
-        product = null;
-}
+// Los providers y clases están en products_providers.dart
 
 class ProductEditScreen extends ConsumerWidget {
   final String productId;
@@ -64,6 +28,18 @@ class ProductEditScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
+        leading: PlatformHelper.isIOS
+            ? CupertinoButton(
+                padding: EdgeInsets.zero,
+                onPressed: () => context.pop(),
+                child: Icon(
+                  CupertinoIcons.back,
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? AppColorsExtension.darkColors['primary']
+                      : AppColorsExtension.lightColors['primary'],
+                ),
+              )
+            : null,
         title: const Text('Editar Producto'),
       ),
       body: productAsync.when(
@@ -74,7 +50,8 @@ class ProductEditScreen extends ConsumerWidget {
           });
 
           return SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
+            padding: EdgeInsets.all(ResponsiveHelper.responsivePadding(context,
+                basePadding: 20, minPadding: 16, maxPadding: 32)),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -82,15 +59,29 @@ class ProductEditScreen extends ConsumerWidget {
                   'Editar Producto',
                   style: textStyles.headlineMedium?.copyWith(
                     fontWeight: FontWeight.bold,
+                    fontSize: ResponsiveHelper.responsiveFontSize(context,
+                        baseSize: 24, minSize: 20, maxSize: 32),
                   ),
                 ),
-                const SizedBox(height: 30),
+                SizedBox(
+                    height: ResponsiveHelper.responsivePadding(context,
+                        basePadding: 30, minPadding: 20, maxPadding: 40)),
                 _ProductEditForm(productId: productId),
               ],
             ),
           );
         },
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () {
+          final isDark = Theme.of(context).brightness == Brightness.dark;
+          final colors = isDark
+              ? AppColorsExtension.darkColors
+              : AppColorsExtension.lightColors;
+          return Center(
+            child: CircularProgressIndicator(
+              color: colors['primary'],
+            ),
+          );
+        },
         error: (error, stack) => _ErrorView(
           error: error.toString(),
           onRetry: () => ref.refresh(productDetailProvider(productId)),
@@ -169,7 +160,9 @@ class _ProductEditFormState extends ConsumerState<_ProductEditForm> {
             onChanged: (value) => formNotifier.setTitle(value),
             validator: (value) => productForm.titleError,
           ),
-          const SizedBox(height: 20),
+          SizedBox(
+              height: ResponsiveHelper.responsivePadding(context,
+                  basePadding: 20, minPadding: 16, maxPadding: 24)),
 
           // Precio
           CustomTextFormField(
@@ -180,7 +173,9 @@ class _ProductEditFormState extends ConsumerState<_ProductEditForm> {
             onChanged: (value) => formNotifier.setPrice(value),
             validator: (value) => productForm.priceError,
           ),
-          const SizedBox(height: 20),
+          SizedBox(
+              height: ResponsiveHelper.responsivePadding(context,
+                  basePadding: 20, minPadding: 16, maxPadding: 24)),
 
           // Descripción
           CustomTextFormField(
@@ -191,7 +186,9 @@ class _ProductEditFormState extends ConsumerState<_ProductEditForm> {
             onChanged: (value) => formNotifier.setDescription(value),
             validator: (value) => productForm.descriptionError,
           ),
-          const SizedBox(height: 20),
+          SizedBox(
+              height: ResponsiveHelper.responsivePadding(context,
+                  basePadding: 20, minPadding: 16, maxPadding: 24)),
 
           // Stock
           CustomTextFormField(
@@ -202,7 +199,9 @@ class _ProductEditFormState extends ConsumerState<_ProductEditForm> {
             onChanged: (value) => formNotifier.setStock(value),
             validator: (value) => productForm.stockError,
           ),
-          const SizedBox(height: 20),
+          SizedBox(
+              height: ResponsiveHelper.responsivePadding(context,
+                  basePadding: 20, minPadding: 16, maxPadding: 24)),
 
           // Género
           _GenderSelector(
@@ -210,14 +209,18 @@ class _ProductEditFormState extends ConsumerState<_ProductEditForm> {
             error: productForm.genderError,
             onGenderSelected: (gender) => formNotifier.setGender(gender),
           ),
-          const SizedBox(height: 20),
+          SizedBox(
+              height: ResponsiveHelper.responsivePadding(context,
+                  basePadding: 20, minPadding: 16, maxPadding: 24)),
 
           // Tallas
           _SizesSelector(
             selectedSizes: productForm.sizes,
             onSizesChanged: (sizes) => formNotifier.setSizes(sizes),
           ),
-          const SizedBox(height: 20),
+          SizedBox(
+              height: ResponsiveHelper.responsivePadding(context,
+                  basePadding: 20, minPadding: 16, maxPadding: 24)),
 
           // Tags
           CustomTextFormField(
@@ -225,7 +228,9 @@ class _ProductEditFormState extends ConsumerState<_ProductEditForm> {
             hint: 'Ej: deportivo, verano, algodón',
             onChanged: (value) => formNotifier.setTagsInput(value),
           ),
-          const SizedBox(height: 20),
+          SizedBox(
+              height: ResponsiveHelper.responsivePadding(context,
+                  basePadding: 20, minPadding: 16, maxPadding: 24)),
 
           // Selector de imágenes
           ProductImageSelector(
@@ -233,9 +238,12 @@ class _ProductEditFormState extends ConsumerState<_ProductEditForm> {
             uploadedImageNames: productForm.uploadedImageNames,
             onImageAdded: (image) => formNotifier.addSelectedImage(image),
             onImageRemoved: (index) => formNotifier.removeSelectedImage(index),
-            onUploadedImageRemoved: (index) => formNotifier.removeUploadedImageName(index),
+            onUploadedImageRemoved: (index) =>
+                formNotifier.removeUploadedImageName(index),
           ),
-          const SizedBox(height: 30),
+          SizedBox(
+              height: ResponsiveHelper.responsivePadding(context,
+                  basePadding: 30, minPadding: 24, maxPadding: 40)),
 
           // Botón actualizar
           SizedBox(
@@ -268,35 +276,62 @@ class _ProductEditFormState extends ConsumerState<_ProductEditForm> {
 
     try {
       final formState = ref.read(productFormProvider);
-      
+
       // Subir imágenes nuevas primero
       final uploadedImageNames = <String>[];
       for (var imageFile in formState.selectedImages) {
         try {
-          final datasource = ref.read(productsDatasourceProvider);
-          final imageName = await datasource.uploadProductImage(imageFile);
+          final uploadUseCase = ref.read(uploadProductImageUseCaseProvider);
+          final imageName = await uploadUseCase(imageFile);
           uploadedImageNames.add(imageName);
-          
+
           // Agregar el nombre de la imagen subida al estado
           formNotifier.addUploadedImageName(imageName);
         } catch (e) {
           if (context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Error al subir imagen: $e'),
-                backgroundColor: Colors.orange,
-              ),
-            );
+            if (PlatformHelper.isIOS) {
+              showCupertinoDialog(
+                context: context,
+                builder: (context) => CupertinoAlertDialog(
+                  title: const Text('Advertencia'),
+                  content: Text('Error al subir imagen: $e'),
+                  actions: [
+                    CupertinoDialogAction(
+                      child: const Text('OK'),
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                  ],
+                ),
+              );
+            } else {
+              final isDark = Theme.of(context).brightness == Brightness.dark;
+              final colors = isDark
+                  ? AppColorsExtension.darkColors
+                  : AppColorsExtension.lightColors;
+
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Error al subir imagen: $e'),
+                  backgroundColor: colors['warning'],
+                  behavior: SnackBarBehavior.floating,
+                  action: SnackBarAction(
+                    label: 'OK',
+                    textColor: Colors.white,
+                    onPressed: () {},
+                  ),
+                ),
+              );
+            }
           }
         }
       }
-      
+
       // Combinar imágenes subidas con las que ya estaban
       final allImageNames = [
         ...formState.uploadedImageNames,
         ...uploadedImageNames,
       ];
-      
+
       // Actualizar el estado con todas las imágenes
       final updatedFormState = ProductFormState(
         title: formState.title,
@@ -309,14 +344,14 @@ class _ProductEditFormState extends ConsumerState<_ProductEditForm> {
         tagsInput: formState.tagsInput,
         uploadedImageNames: allImageNames,
       );
-      
+
       // Usar el estado actualizado para actualizar el producto
       final productData = updatedFormState.toMap();
-      final params = ProductEditParams(
-        id: widget.productId,
-        productData: productData,
-      );
-      final result = await ref.read(productEditProvider(params).future);
+      final updateUseCase = ref.read(updateProductUseCaseProvider);
+      final product = await updateUseCase(widget.productId, productData);
+
+      // Crear resultado de éxito
+      final result = ProductEditResult.success(product);
 
       if (result.isSuccess && context.mounted) {
         // Refrescar la lista de productos y el detalle
@@ -326,32 +361,117 @@ class _ProductEditFormState extends ConsumerState<_ProductEditForm> {
         ref.invalidate(productFormProvider); // Resetear el formulario
 
         // Mostrar mensaje de éxito
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Producto actualizado exitosamente'),
-            backgroundColor: Colors.green,
-          ),
-        );
-        // Navegar de vuelta
-        if (context.mounted) {
-          context.pop(true);
+        if (PlatformHelper.isIOS) {
+          showCupertinoDialog(
+            context: context,
+            builder: (context) => CupertinoAlertDialog(
+              title: const Text('Éxito'),
+              content: const Text('Producto actualizado exitosamente'),
+              actions: [
+                CupertinoDialogAction(
+                  child: const Text('OK'),
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                    if (context.mounted) {
+                      context.pop(true);
+                    }
+                  },
+                ),
+              ],
+            ),
+          );
+        } else {
+          final isDark = Theme.of(context).brightness == Brightness.dark;
+          final colors = isDark
+              ? AppColorsExtension.darkColors
+              : AppColorsExtension.lightColors;
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Producto actualizado exitosamente'),
+              backgroundColor: colors['success'],
+              behavior: SnackBarBehavior.floating,
+              action: SnackBarAction(
+                label: 'OK',
+                textColor: Colors.white,
+                onPressed: () {},
+              ),
+            ),
+          );
+          if (context.mounted) {
+            context.pop(true);
+          }
         }
       } else if (result.error != null && context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: ${result.error}'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        if (PlatformHelper.isIOS) {
+          showCupertinoDialog(
+            context: context,
+            builder: (context) => CupertinoAlertDialog(
+              title: const Text('Error'),
+              content: Text('Error: ${result.error}'),
+              actions: [
+                CupertinoDialogAction(
+                  child: const Text('OK'),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+              ],
+            ),
+          );
+        } else {
+          final isDark = Theme.of(context).brightness == Brightness.dark;
+          final colors = isDark
+              ? AppColorsExtension.darkColors
+              : AppColorsExtension.lightColors;
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error: ${result.error}'),
+              backgroundColor: colors['error'],
+              behavior: SnackBarBehavior.floating,
+              action: SnackBarAction(
+                label: 'OK',
+                textColor: Colors.white,
+                onPressed: () {},
+              ),
+            ),
+          );
+        }
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error al actualizar producto: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        if (PlatformHelper.isIOS) {
+          showCupertinoDialog(
+            context: context,
+            builder: (context) => CupertinoAlertDialog(
+              title: const Text('Error'),
+              content: Text('Error al actualizar producto: $e'),
+              actions: [
+                CupertinoDialogAction(
+                  child: const Text('OK'),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+              ],
+            ),
+          );
+        } else {
+          final isDark = Theme.of(context).brightness == Brightness.dark;
+          final colors = isDark
+              ? AppColorsExtension.darkColors
+              : AppColorsExtension.lightColors;
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error al actualizar producto: $e'),
+              backgroundColor: colors['error'],
+              behavior: SnackBarBehavior.floating,
+              action: SnackBarAction(
+                label: 'OK',
+                textColor: Colors.white,
+                onPressed: () {},
+              ),
+            ),
+          );
+        }
       }
     } finally {
       if (mounted) {
@@ -383,6 +503,10 @@ class _GenderSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colors =
+        isDark ? AppColorsExtension.darkColors : AppColorsExtension.lightColors;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -390,6 +514,7 @@ class _GenderSelector extends StatelessWidget {
           'Género',
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.bold,
+                color: colors['text'],
               ),
         ),
         const SizedBox(height: 10),
@@ -400,14 +525,21 @@ class _GenderSelector extends StatelessWidget {
             final isSelected = selectedGender == gender['value'];
             return FilterChip(
               selected: isSelected,
-              label: Text(gender['label']!),
+              label: Text(
+                gender['label']!,
+                style: TextStyle(
+                  color: isSelected ? Colors.white : colors['text'],
+                ),
+              ),
               onSelected: (selected) {
                 if (selected) {
                   onGenderSelected(gender['value']!);
                 }
               },
-              selectedColor: Theme.of(context).colorScheme.primary,
+              selectedColor: colors['primary'],
               checkmarkColor: Colors.white,
+              backgroundColor: colors['surface'],
+              side: BorderSide(color: colors['border']!),
             );
           }).toList(),
         ),
@@ -416,7 +548,7 @@ class _GenderSelector extends StatelessWidget {
           Text(
             error!,
             style: TextStyle(
-              color: Colors.red.shade700,
+              color: colors['error'],
               fontSize: 12,
             ),
           ),
@@ -444,6 +576,10 @@ class _SizesSelectorState extends State<_SizesSelector> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colors =
+        isDark ? AppColorsExtension.darkColors : AppColorsExtension.lightColors;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -451,6 +587,7 @@ class _SizesSelectorState extends State<_SizesSelector> {
           'Tallas',
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.bold,
+                color: colors['text'],
               ),
         ),
         const SizedBox(height: 10),
@@ -461,7 +598,12 @@ class _SizesSelectorState extends State<_SizesSelector> {
             final isSelected = widget.selectedSizes.contains(size);
             return FilterChip(
               selected: isSelected,
-              label: Text(size),
+              label: Text(
+                size,
+                style: TextStyle(
+                  color: isSelected ? Colors.white : colors['text'],
+                ),
+              ),
               onSelected: (selected) {
                 final newSizes = List<String>.from(widget.selectedSizes);
                 if (selected) {
@@ -471,8 +613,10 @@ class _SizesSelectorState extends State<_SizesSelector> {
                 }
                 widget.onSizesChanged(newSizes);
               },
-              selectedColor: Theme.of(context).colorScheme.primary,
+              selectedColor: colors['primary'],
               checkmarkColor: Colors.white,
+              backgroundColor: colors['surface'],
+              side: BorderSide(color: colors['border']!),
             );
           }).toList(),
         ),
@@ -480,4 +624,3 @@ class _SizesSelectorState extends State<_SizesSelector> {
     );
   }
 }
-

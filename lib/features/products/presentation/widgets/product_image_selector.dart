@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:teslo_shop/config/theme/app_theme.dart';
 
 class ProductImageSelector extends StatefulWidget {
   final List<File> selectedImages;
@@ -39,10 +40,19 @@ class _ProductImageSelectorState extends State<ProductImageSelector> {
       }
     } catch (e) {
       if (mounted) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        final colors =
+            isDark ? AppColorsExtension.darkColors : AppColorsExtension.lightColors;
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error al seleccionar imagen: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: colors['error'],
+            action: SnackBarAction(
+              label: 'OK',
+              textColor: Colors.white,
+              onPressed: () {},
+            ),
           ),
         );
       }
@@ -50,23 +60,40 @@ class _ProductImageSelectorState extends State<ProductImageSelector> {
   }
 
   Future<void> _showImageSourceDialog() async {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colors =
+        isDark ? AppColorsExtension.darkColors : AppColorsExtension.lightColors;
+
     showModalBottomSheet(
       context: context,
+      backgroundColor: colors['card'],
       builder: (BuildContext context) {
         return SafeArea(
           child: Wrap(
             children: [
               ListTile(
-                leading: const Icon(Icons.photo_library),
-                title: const Text('Galería'),
+                leading: Icon(
+                  Icons.photo_library,
+                  color: colors['text'],
+                ),
+                title: Text(
+                  'Galería',
+                  style: TextStyle(color: colors['text']),
+                ),
                 onTap: () {
                   Navigator.pop(context);
                   _pickImage(ImageSource.gallery);
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.camera_alt),
-                title: const Text('Cámara'),
+                leading: Icon(
+                  Icons.camera_alt,
+                  color: colors['text'],
+                ),
+                title: Text(
+                  'Cámara',
+                  style: TextStyle(color: colors['text']),
+                ),
                 onTap: () {
                   Navigator.pop(context);
                   _pickImage(ImageSource.camera);
@@ -81,6 +108,9 @@ class _ProductImageSelectorState extends State<ProductImageSelector> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colors =
+        isDark ? AppColorsExtension.darkColors : AppColorsExtension.lightColors;
     final allImagesCount = widget.selectedImages.length + widget.uploadedImageNames.length;
 
     return Column(
@@ -90,6 +120,7 @@ class _ProductImageSelectorState extends State<ProductImageSelector> {
           'Imágenes del Producto',
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.bold,
+                color: colors['text'],
               ),
         ),
         const SizedBox(height: 10),
@@ -101,9 +132,9 @@ class _ProductImageSelectorState extends State<ProductImageSelector> {
             width: double.infinity,
             height: 150,
             decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey[300]!, width: 2, style: BorderStyle.solid),
+              border: Border.all(color: colors['border']!, width: 2, style: BorderStyle.solid),
               borderRadius: BorderRadius.circular(12),
-              color: Colors.grey[50],
+              color: colors['surface'],
             ),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -111,13 +142,13 @@ class _ProductImageSelectorState extends State<ProductImageSelector> {
                 Icon(
                   Icons.add_photo_alternate,
                   size: 48,
-                  color: Colors.grey[600],
+                  color: colors['textSecondary'],
                 ),
                 const SizedBox(height: 8),
                 Text(
                   'Agregar imagen',
                   style: TextStyle(
-                    color: Colors.grey[600],
+                    color: colors['text'],
                     fontSize: 16,
                   ),
                 ),
@@ -125,7 +156,7 @@ class _ProductImageSelectorState extends State<ProductImageSelector> {
                 Text(
                   'Toca para tomar foto o seleccionar de la galería',
                   style: TextStyle(
-                    color: Colors.grey[500],
+                    color: colors['textSecondary'],
                     fontSize: 12,
                   ),
                 ),
@@ -174,6 +205,10 @@ class _ProductImageSelectorState extends State<ProductImageSelector> {
     required bool isLocal,
     required VoidCallback onRemove,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colors =
+        isDark ? AppColorsExtension.darkColors : AppColorsExtension.lightColors;
+
     return Padding(
       padding: const EdgeInsets.only(right: 8),
       child: Stack(
@@ -183,7 +218,7 @@ class _ProductImageSelectorState extends State<ProductImageSelector> {
             height: 120,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.grey[300]!),
+              border: Border.all(color: colors['border']!),
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(8),
@@ -191,7 +226,10 @@ class _ProductImageSelectorState extends State<ProductImageSelector> {
                 image,
                 fit: BoxFit.cover,
                 errorBuilder: (context, error, stackTrace) {
-                  return const Icon(Icons.broken_image);
+                  return Icon(
+                    Icons.broken_image,
+                    color: colors['textSecondary'],
+                  );
                 },
               ),
             ),
@@ -203,8 +241,8 @@ class _ProductImageSelectorState extends State<ProductImageSelector> {
               onTap: onRemove,
               child: Container(
                 padding: const EdgeInsets.all(4),
-                decoration: const BoxDecoration(
-                  color: Colors.red,
+                decoration: BoxDecoration(
+                  color: colors['error'],
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
@@ -222,7 +260,7 @@ class _ProductImageSelectorState extends State<ProductImageSelector> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
-                  color: Colors.blue[700],
+                  color: colors['primary'],
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: const Text(
@@ -244,8 +282,10 @@ class _ProductImageSelectorState extends State<ProductImageSelector> {
     required String imageName,
     required VoidCallback onRemove,
   }) {
-    // Construir la URL de la imagen (asumiendo que se almacena el nombre)
-    // Esto es solo para mostrar en el selector, la imagen real se mostrará desde el servidor
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colors =
+        isDark ? AppColorsExtension.darkColors : AppColorsExtension.lightColors;
+
     return Padding(
       padding: const EdgeInsets.only(right: 8),
       child: Stack(
@@ -255,8 +295,8 @@ class _ProductImageSelectorState extends State<ProductImageSelector> {
             height: 120,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.grey[300]!),
-              color: Colors.grey[100],
+              border: Border.all(color: colors['border']!),
+              color: colors['surface'],
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(8),
@@ -264,13 +304,20 @@ class _ProductImageSelectorState extends State<ProductImageSelector> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.image, size: 40, color: Colors.grey),
+                    Icon(
+                      Icons.image,
+                      size: 40,
+                      color: colors['textSecondary'],
+                    ),
                     const SizedBox(height: 4),
                     Text(
                       imageName.length > 15 
                           ? '${imageName.substring(0, 15)}...' 
                           : imageName,
-                      style: const TextStyle(fontSize: 10, color: Colors.grey),
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: colors['textSecondary'],
+                      ),
                       textAlign: TextAlign.center,
                     ),
                   ],
@@ -285,8 +332,8 @@ class _ProductImageSelectorState extends State<ProductImageSelector> {
               onTap: onRemove,
               child: Container(
                 padding: const EdgeInsets.all(4),
-                decoration: const BoxDecoration(
-                  color: Colors.red,
+                decoration: BoxDecoration(
+                  color: colors['error'],
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(

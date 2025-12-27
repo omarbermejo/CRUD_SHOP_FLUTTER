@@ -1,10 +1,11 @@
 // ignore_for_file: use_build_context_synchronously
 
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:teslo_shop/config/theme/app_theme.dart';
 import 'package:teslo_shop/features/auth/presentation/provides/auth_provider.dart';
-
 import 'package:teslo_shop/features/auth/presentation/provides/login_form_providers.dart';
 import 'package:teslo_shop/features/shared/shared.dart';
 
@@ -13,57 +14,85 @@ class RegisterScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
-    final scaffoldBackgroundColor = Theme.of(context).scaffoldBackgroundColor;
-    final textStyles = Theme.of(context).textTheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colors =
+        isDark ? AppColorsExtension.darkColors : AppColorsExtension.lightColors;
 
     return GestureDetector(
       onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
       child: Scaffold(
-        body: GeometricalBackground(
-          child: SingleChildScrollView(
-            physics: const ClampingScrollPhysics(),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                const SizedBox(height: 80),
-
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    IconButton(
-                      onPressed: () {
-                        if (!context.canPop()) return;
-                        context.pop();
-                      },
-                      icon: const Icon(Icons.arrow_back_rounded,
-                          size: 40, color: Colors.white),
-                    ),
-                    const Spacer(flex: 1),
-                    Text('Crear cuenta',
-                        style:
-                            textStyles.titleLarge?.copyWith(color: Colors.white)),
-                    const Spacer(flex: 2),
-                  ],
-                ),
-
-                const SizedBox(height: 50),
-
-                Container(
-                  height: size.height - 260,
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: scaffoldBackgroundColor,
-                    borderRadius:
-                        const BorderRadius.only(topLeft: Radius.circular(100)),
+        backgroundColor: colors['background'],
+        appBar: AppBar(
+          leading: PlatformHelper.isIOS
+              ? CupertinoButton(
+                  padding: EdgeInsets.zero,
+                  onPressed: () => context.pop(),
+                  child: Icon(
+                    CupertinoIcons.back,
+                    color: colors['primary'],
                   ),
-                  child: const _RegisterForm(),
                 )
+              : null,
+          title: const Text('Crear cuenta'),
+        ),
+        body: SafeArea(
+          child: SingleChildScrollView(
+            padding: EdgeInsets.symmetric(
+              horizontal: ResponsiveHelper.responsivePadding(context,
+                  basePadding: 24, minPadding: 20, maxPadding: 32),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                SizedBox(
+                    height: ResponsiveHelper.responsivePadding(context,
+                        basePadding: 32, minPadding: 24, maxPadding: 40)),
+                _buildHeader(context),
+                SizedBox(
+                    height: ResponsiveHelper.responsivePadding(context,
+                        basePadding: 32, minPadding: 24, maxPadding: 40)),
+                const _RegisterForm(),
               ],
             ),
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildHeader(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colors =
+        isDark ? AppColorsExtension.darkColors : AppColorsExtension.lightColors;
+
+    return Column(
+      children: [
+        Icon(
+          PlatformHelper.isIOS
+              ? CupertinoIcons.person_add_solid
+              : Icons.person_add_rounded,
+          size: ResponsiveHelper.responsiveFontSize(context,
+              baseSize: 64, minSize: 48, maxSize: 80),
+          color: colors['primary'],
+        ),
+        const SizedBox(height: 16),
+        Text(
+          'Crea tu cuenta',
+          style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: colors['text'],
+              ),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Completa el formulario para comenzar',
+          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                color: colors['textSecondary'],
+              ),
+          textAlign: TextAlign.center,
+        ),
+      ],
     );
   }
 }
@@ -78,155 +107,209 @@ class _RegisterForm extends ConsumerWidget {
     final authState = ref.watch(authProvider);
     final authNotifier = ref.read(authProvider.notifier);
 
-    final textStyles = Theme.of(context).textTheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        CustomTextFormField(
+          label: 'Nombre completo',
+          hint: 'Juan Pérez',
+          keyboardType: TextInputType.name,
+          onChanged: notifier.setFullName,
+          errorMessage: loginForm.fullName.isEmpty
+              ? null
+              : LoginFormValidators.validateFullName(loginForm.fullName),
+        ),
+        CustomTextFormField(
+          label: 'Correo electrónico',
+          hint: 'tu@email.com',
+          keyboardType: TextInputType.emailAddress,
+          onChanged: notifier.setEmail,
+          errorMessage: loginForm.email.isEmpty
+              ? null
+              : LoginFormValidators.validateEmail(loginForm.email),
+        ),
+        CustomTextFormField(
+          label: 'Contraseña',
+          hint: 'Mínimo 6 caracteres',
+          obscureText: true,
+          onChanged: notifier.setPassword,
+          errorMessage: loginForm.password.isEmpty
+              ? null
+              : LoginFormValidators.validatePassword(loginForm.password),
+        ),
+        CustomTextFormField(
+          label: 'Confirmar contraseña',
+          hint: 'Repite tu contraseña',
+          obscureText: true,
+          onChanged: notifier.setConfirmPassword,
+          errorMessage: loginForm.confirmPassword.isEmpty
+              ? null
+              : LoginFormValidators.validateConfirmPassword(
+                  loginForm.password, loginForm.confirmPassword),
+        ),
+        SizedBox(
+            height: ResponsiveHelper.responsivePadding(context,
+                basePadding: 32, minPadding: 24, maxPadding: 40)),
+        CustomFilledButton(
+          text: authState.status == AuthStatus.checking
+              ? 'Creando cuenta...'
+              : 'Crear cuenta',
+          onPressed: authState.status == AuthStatus.checking
+              ? null
+              : () => _handleRegister(context, ref, loginForm, authNotifier),
+        ),
+        SizedBox(
+            height: ResponsiveHelper.responsivePadding(context,
+                basePadding: 24, minPadding: 20, maxPadding: 32)),
+        _buildLoginLink(context),
+      ],
+    );
+  }
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 50),
-      child: Column(
-        children: [
-          const SizedBox(height: 50),
-          Text('Nueva cuenta', style: textStyles.titleMedium),
-          const SizedBox(height: 50),
+  Future<void> _handleRegister(
+    BuildContext context,
+    WidgetRef ref,
+    dynamic loginForm,
+    dynamic authNotifier,
+  ) async {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colors =
+        isDark ? AppColorsExtension.darkColors : AppColorsExtension.lightColors;
 
-          CustomTextFormField(
-            label: 'Nombre completo',
-            keyboardType: TextInputType.name,
-            onChanged: notifier.setFullName,
-            errorMessage: loginForm.fullName.isEmpty
-                ? null
-                : LoginFormValidators.validateFullName(loginForm.fullName),
-          ),
+    // Validación campos vacíos
+    if (loginForm.fullName.isEmpty ||
+        loginForm.email.isEmpty ||
+        loginForm.password.isEmpty ||
+        loginForm.confirmPassword.isEmpty) {
+      _showError(context, 'Por favor complete todos los campos', colors);
+      return;
+    }
 
-          const SizedBox(height: 30),
+    // Validaciones
+    final emailError = LoginFormValidators.validateEmail(loginForm.email);
+    final passwordError =
+        LoginFormValidators.validatePassword(loginForm.password);
+    final confirmPasswordError = LoginFormValidators.validateConfirmPassword(
+      loginForm.password,
+      loginForm.confirmPassword,
+    );
 
-          CustomTextFormField(
-            label: 'Correo',
-            keyboardType: TextInputType.emailAddress,
-            onChanged: notifier.setEmail,
-            errorMessage: loginForm.email.isEmpty
-                ? null
-                : LoginFormValidators.validateEmail(loginForm.email),
-          ),
+    if (emailError != null ||
+        passwordError != null ||
+        confirmPasswordError != null) {
+      _showError(context, emailError ?? passwordError ?? confirmPasswordError!,
+          colors);
+      return;
+    }
 
-          const SizedBox(height: 30),
+    // Register
+    await authNotifier.register(
+      loginForm.email,
+      loginForm.password,
+      loginForm.fullName,
+    );
 
-          CustomTextFormField(
-            label: 'Contraseña',
-            obscureText: true,
-            onChanged: notifier.setPassword,
-            errorMessage: loginForm.password.isEmpty
-                ? null
-                : LoginFormValidators.validatePassword(loginForm.password),
-          ),
+    final authResult = ref.read(authProvider);
 
-          PasswordRequirements(password: loginForm.password),
+    if (!context.mounted) return;
 
-          const SizedBox(height: 30),
+    if (authResult.status == AuthStatus.authenticated) {
+      context.go('/');
+    } else {
+      _showError(context, authResult.errorMessage ?? 'Error al crear la cuenta',
+          colors);
+    }
+  }
 
-          CustomTextFormField(
-            label: 'Repita la contraseña',
-            obscureText: true,
-            onChanged: notifier.setConfirmPassword,
-            errorMessage: loginForm.confirmPassword.isEmpty
-                ? null
-                : LoginFormValidators.validateConfirmPassword(
-                    loginForm.password,
-                    loginForm.confirmPassword,
-                  ),
-          ),
-
-          const SizedBox(height: 30),
-
-          SizedBox(
-            width: double.infinity,
-            height: 60,
-            child: CustomFilledButton(
-              text: authState.status == AuthStatus.checking ? 'Cargando...' : 'Crear',
-              buttonColor: Colors.black,
-              onPressed: authState.status == AuthStatus.checking
-                  ? null
-                  : () async {
-                      // Validación campos vacíos
-                      if (loginForm.fullName.isEmpty ||
-                          loginForm.email.isEmpty ||
-                          loginForm.password.isEmpty ||
-                          loginForm.confirmPassword.isEmpty) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Por favor complete todos los campos'),
-                            backgroundColor: Colors.red,
-                          ),
-                        );
-                        return;
-                      }
-
-                      // Validaciones
-                      final emailError =
-                          LoginFormValidators.validateEmail(loginForm.email);
-                      final passwordError =
-                          LoginFormValidators.validatePassword(loginForm.password);
-                      final confirmPasswordError =
-                          LoginFormValidators.validateConfirmPassword(
-                            loginForm.password,
-                            loginForm.confirmPassword,
-                          );
-
-                      if (emailError != null ||
-                          passwordError != null ||
-                          confirmPasswordError != null) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              emailError ??
-                                  passwordError ??
-                                  confirmPasswordError!,
-                            ),
-                            backgroundColor: Colors.red,
-                          ),
-                        );
-                        return;
-                      }
-
-                      // Register real con token
-                      await authNotifier.register(loginForm.email, loginForm.password, loginForm.fullName);
-
-                      final authResult = ref.read(authProvider);
-
-                      if (!context.mounted) return;
-
-                      if (authResult.status == AuthStatus.authenticated) {
-                        context.go('/');
-                      } else {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(authResult.errorMessage ?? 'Error'),
-                            backgroundColor: Colors.red,
-                          ),
-                        );
-                      }
-                    },
+  void _showError(
+      BuildContext context, String message, Map<String, Color> colors) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: colors['card'],
+        title: Text(
+          'Error',
+          style: TextStyle(color: colors['text']),
+        ),
+        content: Text(
+          message,
+          style: TextStyle(color: colors['textSecondary']),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(
+              'OK',
+              style: TextStyle(color: colors['primary']),
             ),
           ),
-
-          const Spacer(flex: 2),
-
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Text('¿Ya tienes cuenta?'),
-              TextButton(
-                onPressed: () {
-                  if (context.canPop()) return context.pop();
-                  context.go('/login');
-                },
-                child: const Text('Ingresa aquí'),
-              )
-            ],
-          ),
-
-          const Spacer(flex: 1),
         ],
       ),
     );
+  }
+
+  Widget _buildLoginLink(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colors =
+        isDark ? AppColorsExtension.darkColors : AppColorsExtension.lightColors;
+
+    if (PlatformHelper.isIOS) {
+      return Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            '¿Ya tienes cuenta? ',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: colors['textSecondary'],
+                ),
+          ),
+          CupertinoButton(
+            padding: EdgeInsets.zero,
+            onPressed: () {
+              if (context.canPop()) {
+                context.pop();
+              } else {
+                context.go('/login');
+              }
+            },
+            child: Text(
+              'Inicia sesión',
+              style: TextStyle(
+                color: colors['primary'],
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      );
+    } else {
+      return Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            '¿Ya tienes cuenta? ',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: colors['textSecondary'],
+                ),
+          ),
+          TextButton(
+            onPressed: () {
+              if (context.canPop()) {
+                context.pop();
+              } else {
+                context.go('/login');
+              }
+            },
+            child: Text(
+              'Inicia sesión',
+              style: TextStyle(
+                color: colors['primary'],
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      );
+    }
   }
 }

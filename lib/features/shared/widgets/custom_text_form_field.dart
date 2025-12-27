@@ -1,10 +1,8 @@
-// ignore_for_file: deprecated_member_use
-
 import 'package:flutter/material.dart';
-
+import 'package:flutter/cupertino.dart';
+import 'package:teslo_shop/config/theme/app_theme.dart';
 
 class CustomTextFormField extends StatelessWidget {
-
   final String? label;
   final String? hint;
   final String? errorMessage;
@@ -14,61 +12,109 @@ class CustomTextFormField extends StatelessWidget {
   final String? Function(String?)? validator;
 
   const CustomTextFormField({
-    super.key, 
-    this.label, 
-    this.hint, 
-    this.errorMessage, 
+    super.key,
+    this.label,
+    this.hint,
+    this.errorMessage,
     this.obscureText = false,
     this.keyboardType = TextInputType.text,
-    this.onChanged, 
-    this.validator, 
+    this.onChanged,
+    this.validator,
   });
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colors =
+        isDark ? AppColorsExtension.darkColors : AppColorsExtension.lightColors;
+    final fontSize = ResponsiveHelper.responsiveFontSize(context,
+        baseSize: 16, minSize: 14, maxSize: 18);
 
-    final colors = Theme.of(context).colorScheme;
-
-    final border = OutlineInputBorder(
-      borderSide: const BorderSide(color: Colors.transparent),
-      borderRadius: BorderRadius.circular(40)
-    );
-
-    const borderRadius = Radius.circular(15);
-
-    return Container(
-      // padding: const EdgeInsets.only(bottom: 0, top: 15),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: const BorderRadius.only(topLeft: borderRadius, bottomLeft: borderRadius, bottomRight: borderRadius ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.06),
-            blurRadius: 10,
-            offset: const Offset(0,5)
-          )
-        ]
-      ),
-      child: TextFormField(
-        onChanged: onChanged,
-        validator: validator,
-        obscureText: obscureText,
-        keyboardType: keyboardType,
-        style: const TextStyle( fontSize: 20, color: Colors.black54 ),
-        decoration: InputDecoration(
-          floatingLabelStyle: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 18),
-          enabledBorder: border,
-          focusedBorder: border,
-          errorBorder: border.copyWith( borderSide: BorderSide( color: Colors.red.shade800 )),
-          focusedErrorBorder: border.copyWith( borderSide: BorderSide( color: Colors.red.shade800 )),
-          isDense: true,
-          label: label != null ? Text(label!) : null,
-          hintText: hint,
-          errorText: errorMessage,
-          focusColor: colors.primary,
-          // icon: Icon( Icons.supervised_user_circle_outlined, color: colors.primary, )
+    if (PlatformHelper.isIOS) {
+      // iOS: Input estilo Cupertino
+      return Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        decoration: BoxDecoration(
+          color: colors['surface'],
+          borderRadius: BorderRadius.circular(10),
         ),
-      ),
-    );
+        child: CupertinoTextField(
+          placeholder: hint ?? label,
+          obscureText: obscureText,
+          keyboardType: keyboardType,
+          onChanged: onChanged,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: colors['surface'],
+            borderRadius: BorderRadius.circular(10),
+            border: errorMessage != null
+                ? Border.all(color: colors['error']!, width: 1)
+                : Border.all(color: colors['border']!, width: 1),
+          ),
+          style: TextStyle(
+            fontSize: fontSize,
+            color: colors['text'],
+            letterSpacing: -0.41,
+          ),
+          placeholderStyle: TextStyle(
+            color: colors['textSecondary'],
+            fontSize: fontSize,
+          ),
+        ),
+      );
+    } else {
+      // Android: Input Material
+      return Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        decoration: BoxDecoration(
+          color: colors['surface'],
+          borderRadius: BorderRadius.circular(12),
+          border: errorMessage != null
+              ? Border.all(color: colors['error']!, width: 1)
+              : Border.all(color: colors['border']!, width: 1),
+        ),
+        child: TextFormField(
+          onChanged: onChanged,
+          validator: validator,
+          obscureText: obscureText,
+          keyboardType: keyboardType,
+          style: TextStyle(
+            fontSize: fontSize,
+            color: colors['text'],
+          ),
+          decoration: InputDecoration(
+            labelText: label,
+            hintText: hint,
+            errorText: errorMessage,
+            filled: true,
+            fillColor: colors['surface'],
+            labelStyle: TextStyle(color: colors['textSecondary']),
+            hintStyle: TextStyle(color: colors['textSecondary']),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: colors['border']!, width: 1),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: colors['primary']!, width: 2),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: colors['error']!, width: 1),
+            ),
+            focusedErrorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: colors['error']!, width: 2),
+            ),
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          ),
+        ),
+      );
+    }
   }
 }

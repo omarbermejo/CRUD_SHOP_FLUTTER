@@ -1,16 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:teslo_shop/config/const/env.dart';
+import 'package:teslo_shop/config/theme/app_theme.dart';
 import 'package:teslo_shop/features/auth/presentation/provides/auth_provider.dart';
 import 'package:teslo_shop/features/products/domain/entities/product.dart';
-import 'package:teslo_shop/features/products/presentation/screens/products_screen.dart';
+import 'package:teslo_shop/features/products/presentation/providers/products_providers.dart';
 import 'package:teslo_shop/features/products/presentation/utils/product_permissions.dart';
-
-final productDetailProvider = FutureProvider.family<Product, String>((ref, productId) async {
-  final datasource = ref.watch(productsDatasourceProvider);
-  return await datasource.getProductById(productId);
-});
 
 class ProductScreenDetails extends ConsumerWidget {
   final String productId;
@@ -39,38 +36,163 @@ class ProductScreenDetails extends ConsumerWidget {
     final authState = ref.watch(authProvider);
     final currentUser = authState.user;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Detalle del Producto'),
-        actions: productAsync.when(
-          data: (product) => [
-            if (canEditProduct(product, currentUser))
-              IconButton(
-                icon: const Icon(Icons.edit),
-                tooltip: 'Editar producto',
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colors =
+        isDark ? AppColorsExtension.darkColors : AppColorsExtension.lightColors;
+
+    if (PlatformHelper.isIOS) {
+      return CupertinoPageScaffold(
+        navigationBar: CupertinoNavigationBar(
+          middle: const Text('Detalle del Producto'),
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CupertinoButton(
+                padding: EdgeInsets.zero,
                 onPressed: () {
-                  context.push('/products/edit/${product.id}');
+                  // TODO: Mostrar ayuda
                 },
+                child: Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: colors['primary'],
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    CupertinoIcons.question_circle,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                ),
               ),
+              ...productAsync.when(
+                data: (product) => [
+                  if (canEditProduct(product, currentUser))
+                    CupertinoButton(
+                      padding: EdgeInsets.zero,
+                      onPressed: () {
+                        context.push('/products/edit/${product.id}');
+                      },
+                      child: Icon(
+                        CupertinoIcons.pencil,
+                        color: colors['text'],
+                      ),
+                    ),
+                ],
+                loading: () => const [],
+                error: (_, __) => const [],
+              ),
+            ],
+          ),
+        ),
+        child: SafeArea(
+          child: CupertinoScrollbar(
+            child: CustomScrollView(
+              slivers: [
+                CupertinoSliverRefreshControl(
+                  onRefresh: () async {
+                    ref.invalidate(productDetailProvider(productId));
+                    await Future.delayed(const Duration(milliseconds: 500));
+                  },
+                ),
+                SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: productAsync.when(
+                    data: (product) => _ProductDetailView(
+                      product: product,
+                      buildImageUrl: _buildImageUrl,
+                      textStyles: textStyles,
+                      currentUser: currentUser,
+                    ),
+                    loading: () => Center(
+                      child: CupertinoActivityIndicator(
+                        color: colors['primary'],
+                      ),
+                    ),
+                    error: (error, stack) => _ErrorView(
+                      error: error.toString(),
+                      onRetry: () {
+                        ref.invalidate(productDetailProvider(productId));
+                      },
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    } else {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('Detalle del Producto'),
+          actions: [
+            // Botón de ayuda
+            IconButton(
+              icon: Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: colors['primary'],
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.help_outline,
+                  color: Colors.white,
+                  size: 20,
+                ),
+              ),
+              onPressed: () {
+                // TODO: Mostrar ayuda
+              },
+            ),
+            ...productAsync.when(
+              data: (product) => [
+                if (canEditProduct(product, currentUser))
+                  IconButton(
+                    icon: Icon(
+                      Icons.edit,
+                      color: colors['text'],
+                    ),
+                    tooltip: 'Editar producto',
+                    onPressed: () {
+                      context.push('/products/edit/${product.id}');
+                    },
+                  ),
+              ],
+              loading: () => const [],
+              error: (_, __) => const [],
+            ),
           ],
-          loading: () => const [],
-          error: (_, __) => const [],
         ),
-      ),
-      body: productAsync.when(
-        data: (product) => _ProductDetailView(
-          product: product,
-          buildImageUrl: _buildImageUrl,
-          textStyles: textStyles,
-          currentUser: currentUser,
+        body: RefreshIndicator(
+          onRefresh: () async {
+            ref.invalidate(productDetailProvider(productId));
+            await Future.delayed(const Duration(milliseconds: 500));
+          },
+          child: productAsync.when(
+            data: (product) => _ProductDetailView(
+              product: product,
+              buildImageUrl: _buildImageUrl,
+              textStyles: textStyles,
+              currentUser: currentUser,
+            ),
+            loading: () => Center(
+              child: CircularProgressIndicator(
+                color: colors['primary'],
+              ),
+            ),
+            error: (error, stack) => _ErrorView(
+              error: error.toString(),
+              onRetry: () {
+                ref.invalidate(productDetailProvider(productId));
+              },
+            ),
+          ),
         ),
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => _ErrorView(
-          error: error.toString(),
-          onRetry: () => ref.refresh(productDetailProvider(productId)),
-        ),
-      ),
-    );
+      );
+    }
   }
 }
 
@@ -111,7 +233,9 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
   Widget build(BuildContext context) {
     final product = widget.product;
     final textStyles = widget.textStyles;
-    final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colors =
+        isDark ? AppColorsExtension.darkColors : AppColorsExtension.lightColors;
 
     return SingleChildScrollView(
       child: Column(
@@ -131,7 +255,8 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
           ),
 
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(ResponsiveHelper.responsivePadding(context,
+                basePadding: 16, minPadding: 12, maxPadding: 24)),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -156,18 +281,27 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
                 Text(
                   product.slug,
                   style: textStyles.bodyMedium?.copyWith(
-                    color: Colors.grey[600],
+                    color: colors['textSecondary'],
                   ),
                 ),
 
                 const SizedBox(height: 16),
 
-                // Precio
-                Text(
-                  '\$${product.price.toStringAsFixed(2)}',
-                  style: textStyles.headlineMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: colorScheme.primary,
+                // Precio con estilo destacado
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: colors['primary'],
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Text(
+                    '\$${product.price.toStringAsFixed(2)}',
+                    style: textStyles.headlineMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                      letterSpacing: 0.5,
+                    ),
                   ),
                 ),
 
@@ -192,7 +326,6 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
                 _ProductInfoSection(
                   product: product,
                   textStyles: textStyles,
-                  colorScheme: colorScheme,
                 ),
 
                 const SizedBox(height: 32),
@@ -201,35 +334,116 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
                 if (canEditProduct(product, widget.currentUser))
                   SizedBox(
                     width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        context.push('/products/edit/${product.id}');
-                      },
-                      icon: const Icon(Icons.edit),
-                      label: const Text('Editar Producto'),
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        backgroundColor: colorScheme.primary,
-                        foregroundColor: Colors.white,
-                      ),
-                    ),
+                    child: PlatformHelper.isIOS
+                        ? CupertinoButton.filled(
+                            onPressed: () {
+                              context.push('/products/edit/${product.id}');
+                            },
+                            child: const Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(CupertinoIcons.pencil, size: 18),
+                                SizedBox(width: 8),
+                                Text('Editar Producto'),
+                              ],
+                            ),
+                          )
+                        : ElevatedButton.icon(
+                            onPressed: () {
+                              context.push('/products/edit/${product.id}');
+                            },
+                            icon: const Icon(Icons.edit, color: Colors.white),
+                            label: const Text(
+                              'Editar Producto',
+                              style: TextStyle(color: Colors.white),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              padding: EdgeInsets.symmetric(
+                                  vertical: ResponsiveHelper.responsivePadding(
+                                      context,
+                                      basePadding: 16,
+                                      minPadding: 12,
+                                      maxPadding: 20)),
+                              backgroundColor: colors['primary'],
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                          ),
                   ),
 
                 if (canEditProduct(product, widget.currentUser))
-                  const SizedBox(height: 12),
+                  SizedBox(
+                      height: ResponsiveHelper.responsivePadding(context,
+                          basePadding: 12, minPadding: 8, maxPadding: 16)),
 
                 SizedBox(
                   width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      // TODO: Implementar agregar al carrito
-                    },
-                    icon: const Icon(Icons.shopping_cart),
-                    label: const Text('Agregar al Carrito'),
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                    ),
-                  ),
+                  child: PlatformHelper.isIOS
+                      ? CupertinoButton.filled(
+                          onPressed: () {
+                            showCupertinoDialog(
+                              context: context,
+                              builder: (context) => CupertinoAlertDialog(
+                                title: const Text('Próximamente'),
+                                content: const Text(
+                                    'La funcionalidad de carrito estará disponible pronto.'),
+                                actions: [
+                                  CupertinoDialogAction(
+                                    child: const Text('OK'),
+                                    onPressed: () =>
+                                        Navigator.of(context).pop(),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                          child: const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(CupertinoIcons.cart, size: 18),
+                              SizedBox(width: 8),
+                              Text('Agregar al Carrito'),
+                            ],
+                          ),
+                        )
+                      : ElevatedButton.icon(
+                          onPressed: () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: const Text(
+                                    'La funcionalidad de carrito estará disponible pronto.'),
+                                behavior: SnackBarBehavior.floating,
+                                backgroundColor: colors['surface'],
+                                action: SnackBarAction(
+                                  label: 'OK',
+                                  textColor: colors['primary'],
+                                  onPressed: () {},
+                                ),
+                              ),
+                            );
+                          },
+                          icon: const Icon(Icons.shopping_cart,
+                              color: Colors.white),
+                          label: const Text(
+                            'Agregar al Carrito',
+                            style: TextStyle(color: Colors.white),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            padding: EdgeInsets.symmetric(
+                                vertical: ResponsiveHelper.responsivePadding(
+                                    context,
+                                    basePadding: 16,
+                                    minPadding: 12,
+                                    maxPadding: 20)),
+                            backgroundColor: colors['primary'],
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        ),
                 ),
               ],
             ),
@@ -270,13 +484,29 @@ class _ProductImagesCarouselState extends State<_ProductImagesCarousel> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colors =
+        isDark ? AppColorsExtension.darkColors : AppColorsExtension.lightColors;
+
+    final imageHeight = ResponsiveHelper.responsivePadding(context,
+        basePadding: 400, minPadding: 250, maxPadding: 500);
+    final thumbnailHeight = ResponsiveHelper.responsivePadding(context,
+        basePadding: 100, minPadding: 70, maxPadding: 120);
+    final thumbnailSize = ResponsiveHelper.responsivePadding(context,
+        basePadding: 80, minPadding: 60, maxPadding: 100);
+
     if (widget.images.isEmpty) {
       return Container(
         width: double.infinity,
-        height: 400,
-        color: Colors.grey[200],
-        child: const Center(
-          child: Icon(Icons.image, size: 100, color: Colors.grey),
+        height: imageHeight,
+        color: colors['background'],
+        child: Center(
+          child: Icon(
+            Icons.image,
+            size: ResponsiveHelper.responsiveFontSize(context,
+                baseSize: 100, minSize: 60, maxSize: 120),
+            color: colors['textSecondary'],
+          ),
         ),
       );
     }
@@ -286,7 +516,7 @@ class _ProductImagesCarouselState extends State<_ProductImagesCarousel> {
         // Carousel de imágenes principales
         SizedBox(
           width: double.infinity,
-          height: 400,
+          height: imageHeight,
           child: PageView.builder(
             controller: widget.pageController,
             itemCount: widget.images.length,
@@ -300,17 +530,25 @@ class _ProductImagesCarouselState extends State<_ProductImagesCarousel> {
               final imageUrl = widget.buildImageUrl(widget.images[index]);
               return Container(
                 width: double.infinity,
-                color: Colors.grey[100],
+                color: colors['background'],
                 child: Image.network(
                   imageUrl,
                   fit: BoxFit.contain,
                   loadingBuilder: (context, child, loadingProgress) {
                     if (loadingProgress == null) return child;
-                    return const Center(child: CircularProgressIndicator());
+                    return Center(
+                      child: CircularProgressIndicator(
+                        color: colors['primary'],
+                      ),
+                    );
                   },
                   errorBuilder: (context, error, stackTrace) {
-                    return const Center(
-                      child: Icon(Icons.broken_image, size: 100, color: Colors.grey),
+                    return Center(
+                      child: Icon(
+                        Icons.broken_image,
+                        size: 100,
+                        color: colors['textSecondary'],
+                      ),
                     );
                   },
                 ),
@@ -334,8 +572,8 @@ class _ProductImagesCarouselState extends State<_ProductImagesCarousel> {
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: _currentIndex == index
-                        ? Theme.of(context).colorScheme.primary
-                        : Colors.grey[300],
+                        ? colors['primary']
+                        : colors['textSecondary']!.withOpacity(0.3),
                   ),
                 ),
               ),
@@ -345,11 +583,15 @@ class _ProductImagesCarouselState extends State<_ProductImagesCarousel> {
         // Thumbnails
         if (widget.images.length > 1)
           Container(
-            height: 100,
-            padding: const EdgeInsets.symmetric(vertical: 12),
+            height: thumbnailHeight,
+            padding: EdgeInsets.symmetric(
+                vertical: ResponsiveHelper.responsivePadding(context,
+                    basePadding: 12, minPadding: 8, maxPadding: 16)),
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              padding: EdgeInsets.symmetric(
+                  horizontal: ResponsiveHelper.responsivePadding(context,
+                      basePadding: 16, minPadding: 12, maxPadding: 24)),
               itemCount: widget.images.length,
               itemBuilder: (context, index) {
                 final isSelected = index == _currentIndex;
@@ -364,14 +606,13 @@ class _ProductImagesCarouselState extends State<_ProductImagesCarousel> {
                     );
                   },
                   child: Container(
-                    width: 80,
-                    height: 80,
+                    width: thumbnailSize,
+                    height: thumbnailSize,
                     margin: const EdgeInsets.only(right: 8),
                     decoration: BoxDecoration(
                       border: Border.all(
-                        color: isSelected
-                            ? Theme.of(context).colorScheme.primary
-                            : Colors.grey[300]!,
+                        color:
+                            isSelected ? colors['primary']! : colors['border']!,
                         width: isSelected ? 3 : 1,
                       ),
                       borderRadius: BorderRadius.circular(8),
@@ -382,7 +623,13 @@ class _ProductImagesCarouselState extends State<_ProductImagesCarousel> {
                         thumbnailUrl,
                         fit: BoxFit.cover,
                         errorBuilder: (context, error, stackTrace) {
-                          return const Icon(Icons.broken_image);
+                          return Container(
+                            color: colors['background'],
+                            child: Icon(
+                              Icons.broken_image,
+                              color: colors['textSecondary'],
+                            ),
+                          );
                         },
                       ),
                     ),
@@ -399,27 +646,34 @@ class _ProductImagesCarouselState extends State<_ProductImagesCarousel> {
 class _ProductInfoSection extends StatelessWidget {
   final Product product;
   final TextTheme textStyles;
-  final ColorScheme colorScheme;
 
   const _ProductInfoSection({
     required this.product,
     required this.textStyles,
-    required this.colorScheme,
   });
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colors =
+        isDark ? AppColorsExtension.darkColors : AppColorsExtension.lightColors;
+
+    Color stockColor;
+    if (product.stock > 10) {
+      stockColor = colors['success']!;
+    } else if (product.stock > 0) {
+      stockColor = colors['warning']!;
+    } else {
+      stockColor = colors['error']!;
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _InfoRow(
           label: 'Stock disponible',
           value: product.stock.toString(),
-          color: product.stock > 10
-              ? Colors.green
-              : product.stock > 0
-                  ? Colors.orange
-                  : Colors.red,
+          color: stockColor,
         ),
         const SizedBox(height: 12),
         if (product.sizes.isNotEmpty)
@@ -435,7 +689,12 @@ class _ProductInfoSection extends StatelessWidget {
             children: product.tags.map((tag) {
               return Chip(
                 label: Text(tag),
-                labelStyle: const TextStyle(fontSize: 12),
+                labelStyle: TextStyle(
+                  fontSize: 12,
+                  color: colors['text'],
+                ),
+                backgroundColor: colors['surface'],
+                side: BorderSide(color: colors['border']!),
               );
             }).toList(),
           ),
@@ -457,6 +716,10 @@ class _InfoRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colors =
+        isDark ? AppColorsExtension.darkColors : AppColorsExtension.lightColors;
+
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -464,9 +727,9 @@ class _InfoRow extends StatelessWidget {
           width: 120,
           child: Text(
             label,
-            style: const TextStyle(
+            style: TextStyle(
               fontWeight: FontWeight.bold,
-              color: Colors.grey,
+              color: colors['textSecondary'],
             ),
           ),
         ),
@@ -474,7 +737,7 @@ class _InfoRow extends StatelessWidget {
           child: Text(
             value,
             style: TextStyle(
-              color: color,
+              color: color ?? colors['text'],
               fontWeight: color != null ? FontWeight.bold : FontWeight.normal,
             ),
           ),
@@ -545,30 +808,72 @@ class _ErrorView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colors =
+        isDark ? AppColorsExtension.darkColors : AppColorsExtension.lightColors;
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24.0),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.error_outline, size: 64, color: Colors.red),
-            const SizedBox(height: 16),
-            const Text(
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: colors['error']!.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.error_outline,
+                size: 64,
+                color: colors['error'],
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(
               'Error al cargar producto',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: colors['text'],
+                  ),
             ),
             const SizedBox(height: 8),
             Text(
               error,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.grey),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: colors['textSecondary'],
+                  ),
             ),
             const SizedBox(height: 24),
-            ElevatedButton.icon(
-              onPressed: onRetry,
-              icon: const Icon(Icons.refresh),
-              label: const Text('Reintentar'),
-            ),
+            PlatformHelper.isIOS
+                ? CupertinoButton.filled(
+                    onPressed: onRetry,
+                    child: const Text('Reintentar'),
+                  )
+                : ElevatedButton.icon(
+                    onPressed: onRetry,
+                    icon: const Icon(Icons.refresh, color: Colors.white),
+                    label: const Text(
+                      'Reintentar',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor:
+                          Theme.of(context).brightness == Brightness.dark
+                              ? AppColorsExtension.darkColors['primary']
+                              : AppColorsExtension.lightColors['primary'],
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 12,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
           ],
         ),
       ),
