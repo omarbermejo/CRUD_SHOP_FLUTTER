@@ -1,5 +1,7 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:teslo_shop/features/auth/auth.dart';
+import 'package:teslo_shop/features/auth/presentation/provides/auth_provider.dart';
 import 'package:teslo_shop/features/products/products.dart';
 
 final appRouter = GoRouter(
@@ -47,6 +49,14 @@ final appRouter = GoRouter(
       },
     ),
   ],
-
-  ///! TODO: Bloquear si no se está autenticado de alguna manera
+  redirect: (context, state) {
+    final authState = ProviderScope.containerOf(context).read(authProvider);
+    if (authState.status == AuthStatus.authenticated && state.path == '/login') {
+      return '/';
+    }
+    if (authState.status == AuthStatus.unauthenticated && state.path != '/login') {
+      return '/login';
+    }
+    return null;
+  },
 );

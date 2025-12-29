@@ -193,6 +193,10 @@ class ProductFormNotifier extends StateNotifier<ProductFormState> {
     state = state.copyWith(tagsInput: tagsInput);
   }
 
+
+  /*
+    Aqui se gestiona la parte del CRUD desde el apartado del fornt, nos sirve como referencia para el CRUD de las imagenes.
+  */
   void addSelectedImage(File image) {
     final updatedImages = List<File>.from(state.selectedImages)..add(image);
     state = state.copyWith(selectedImages: updatedImages);
@@ -202,7 +206,7 @@ class ProductFormNotifier extends StateNotifier<ProductFormState> {
     final updatedImages = List<File>.from(state.selectedImages)..removeAt(index);
     state = state.copyWith(selectedImages: updatedImages);
   }
-
+  
   void addUploadedImageName(String imageName) {
     final updatedNames = List<String>.from(state.uploadedImageNames)..add(imageName);
     state = state.copyWith(uploadedImageNames: updatedNames);
@@ -212,7 +216,7 @@ class ProductFormNotifier extends StateNotifier<ProductFormState> {
     final updatedNames = List<String>.from(state.uploadedImageNames)..removeAt(index);
     state = state.copyWith(uploadedImageNames: updatedNames);
   }
-
+  // Resetea los estados para la creacion de un nuevo objeto o producto, esto es para tener el placerholder mas limpio conforme la aplicacion va escalando.
   void reset() {
     state = const ProductFormState();
   }
@@ -231,7 +235,7 @@ class ProductFormNotifier extends StateNotifier<ProductFormState> {
       uploadedImageNames: List<String>.from(product.images),
     );
   }
-
+  // Se validan los datos los cuales son requeridos para la instancia del producto(obligatorios), se gestiona de forma de no mandar datos nulos a la BD.
   bool validate() {
     String? titleError;
     String? priceError;

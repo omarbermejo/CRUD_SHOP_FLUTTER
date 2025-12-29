@@ -165,6 +165,7 @@ class _ProductFormState extends ConsumerState<_ProductForm> {
           // Selector de imágenes
           ProductImageSelector(
             selectedImages: productForm.selectedImages,
+            // Esta es la funcion para poder mostrar las imagenes que ya han sido subidas al servidor.
             uploadedImageNames: productForm.uploadedImageNames,
             onImageAdded: (image) => formNotifier.addSelectedImage(image),
             onImageRemoved: (index) => formNotifier.removeSelectedImage(index),
@@ -205,7 +206,78 @@ class _ProductFormState extends ConsumerState<_ProductForm> {
     });
 
     try {
-      final productData = ref.read(productFormProvider).toMap();
+      final formState = ref.read(productFormProvider);
+
+      // Subir imágenes nuevas primero
+      final uploadedImageNames = <String>[];
+      for (var imageFile in formState.selectedImages) {
+        try {
+          final uploadUseCase = ref.read(uploadProductImageUseCaseProvider);
+          final imageName = await uploadUseCase(imageFile);
+          uploadedImageNames.add(imageName);
+
+          // Agregar el nombre de la imagen subida al estado
+          formNotifier.addUploadedImageName(imageName);
+        } catch (e) {
+          if (context.mounted) {
+            if (PlatformHelper.isIOS) {
+              showCupertinoDialog(
+                context: context,
+                builder: (context) => CupertinoAlertDialog(
+                  title: const Text('Advertencia'),
+                  content: Text('Error al subir imagen: $e'),
+                  actions: [
+                    CupertinoDialogAction(
+                      child: const Text('OK'),
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                  ],
+                ),
+              );
+            } else {
+              final isDark = Theme.of(context).brightness == Brightness.dark;
+              final colors = isDark
+                  ? AppColorsExtension.darkColors
+                  : AppColorsExtension.lightColors;
+
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Error al subir imagen: $e'),
+                  backgroundColor: colors['warning'],
+                  behavior: SnackBarBehavior.floating,
+                  action: SnackBarAction(
+                    label: 'OK',
+                    textColor: Colors.white,
+                    onPressed: () {},
+                  ),
+                ),
+              );
+            }
+          }
+        }
+      }
+
+      // Combinar imágenes subidas con las que ya estaban (si las hay)
+      final allImageNames = [
+        ...formState.uploadedImageNames,
+        ...uploadedImageNames,
+      ];
+
+      // Crear un estado temporal con todas las imágenes para generar el Map correcto
+      final updatedFormState = ProductFormState(
+        title: formState.title,
+        price: formState.price,
+        description: formState.description,
+        slug: formState.slug,
+        stock: formState.stock,
+        sizes: formState.sizes,
+        gender: formState.gender,
+        tagsInput: formState.tagsInput,
+        uploadedImageNames: allImageNames,
+      );
+
+      // Usar el estado actualizado para crear el producto
+      final productData = updatedFormState.toMap();
       final createUseCase = ref.read(createProductUseCaseProvider);
       final product = await createUseCase(productData);
 
@@ -216,6 +288,7 @@ class _ProductFormState extends ConsumerState<_ProductForm> {
         // Refrescar la lista de productos
         ref.invalidate(productsProvider);
         ref.invalidate(myProductsProvider);
+        ref.invalidate(productFormProvider); // Resetear el formulario
 
         // Mostrar mensaje de éxito
         if (PlatformHelper.isIOS) {

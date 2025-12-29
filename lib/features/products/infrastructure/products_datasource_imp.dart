@@ -95,19 +95,11 @@ class ProductsDatasourceImp extends ProductsDataSource {
         .map((product) {
           try {
             final productMap = product as Map<String, dynamic>;
-            
-            // Debug: mostrar datos originales antes de normalizar
-            if (productMap.containsKey('user')) {
-              debugPrint('[ProductsDatasource] Producto tiene objeto user: ${productMap['user']}');
-            }
-            if (productMap.containsKey('userId')) {
-              debugPrint('[ProductsDatasource] Producto tiene userId directo: ${productMap['userId']}');
-            }
-            
+         
             final normalized = _normalizeProductData(productMap);
             final parsedProduct = Product.fromMap(normalized);
             
-            debugPrint('[ProductsDatasource] Producto parseado - ID: ${parsedProduct.id}, Title: ${parsedProduct.title}, UserId: ${parsedProduct.userId ?? "null"}');
+          
             return parsedProduct;
           } catch (e, stackTrace) {
             debugPrint('[ProductsDatasource] Error al parsear producto: $e');
@@ -238,8 +230,9 @@ class ProductsDatasourceImp extends ProductsDataSource {
       if (response.containsKey('data') && response['data'] is Map) {
         productData = response['data'] as Map<String, dynamic>;
       }
-      
+
       final normalized = _normalizeProductData(productData);
+      
       return Product.fromMap(normalized);
     } on AppError {
       rethrow;
@@ -303,14 +296,16 @@ class ProductsDatasourceImp extends ProductsDataSource {
       
       // El servidor debería devolver el nombre del archivo en la respuesta
       // Según la documentación, el endpoint POST /api/files/product devuelve el nombre del archivo
-      if (response.containsKey('filename')) {
+      if (response.containsKey('image')) {
+        return response['image'] as String;
+      } else if (response.containsKey('filename')) {
         return response['filename'] as String;
       } else if (response.containsKey('file')) {
         return response['file'] as String;
       } else if (response.containsKey('name')) {
         return response['name'] as String;
-      } else if (response.containsKey('imageName')) {
-        return response['imageName'] as String;
+      } else if (response.containsKey('images')) {
+        return response['images'] as String;
       } else {
         // Si no hay nombre en la respuesta, usar el nombre del archivo original
         final fileName = imageFile.path.split(Platform.pathSeparator).last;
